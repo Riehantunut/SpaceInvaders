@@ -1,5 +1,6 @@
 #include <pic32mx.h>
 #include <stdint.h>
+#include <stdlib.h> 
 
 #define DISPLAY_VDD PORTFbits.RF6
 #define DISPLAY_VBATT PORTFbits.RF5
@@ -149,6 +150,8 @@ static const uint8_t const font[] = {
 	0, 0, 4, 2, 4, 2, 0, 0,
 	0, 120, 68, 66, 68, 120, 0, 0,
 };
+
+int meteor1Info[3] = {0,0,0}; // Info about meteor1
 
 uint8_t  icon1[512] = {
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -370,8 +373,39 @@ void changeOnePixel(int x, int y, int status) {
 	
 }
 
+// Clears screen from a certain coordinate and its radius.
+void removePoint(int xMiddle, int yMiddle, int radius){
+  int xCounter;
+  int yCounter;
+  for(xCounter = 0; xCounter <= (radius*2); xCounter++){
+    for(yCounter = 0; yCounter <= (radius*2); yCounter++){
+      changeOnePixel((xCounter+xMiddle-radius), (yCounter+yMiddle-radius), 1);
+    }
+  }
+}
+
+ // Function for making and controlling a meteor. 
+ // xMovement is how many steps the meteor should take in x-axis (this is negative if the meteor goes left)
+ // yMovement is steps in y-axis. 
+ // For meteor to exist put status1 !=0, to remove it put status1=0
+
+void meteor1(int xMovement1, int yMovement1, int status1){
+  if(status1 == 0){  // If we want to remove meteor, or keep it gone
+    meteor1Info[0] = 0; //x-pos
+    meteor1Info[1] = 0; //y-pos
+    meteor1Info[2] = 0; //status
+    return;
+  }
+  if(xMovement1 != 0){  //Move meteor in x-axis.
+    int foo;
+    //removePoint
+    //changeOnePixel(timeCounter, timeCounter, 0); 
+  }
+  
+}
 
 
+  
 int main(void) {
 	/* Set up peripheral bus clock */
 	OSCCON &= ~0x180000;
@@ -409,7 +443,10 @@ int main(void) {
 	
 	display_init();
 	display_update();
-
+	
+int endGame = 0;
+int timeCounter = 0;
+while(endGame != 1){
 	display_image(288, icon4);
 	display_image(192, icon3);
 	display_image(96, icon2);
@@ -421,14 +458,17 @@ int main(void) {
 		foo = j +1;
 		}	
 	/* x,y, status */
-	changeOnePixel(127, 31, 0); 
+	changeOnePixel(timeCounter, timeCounter, 0); 
+	
+	timeCounter++;
+	removePoint(4,4, 2);
 	
 	display_image(288, icon4);
 	display_image(192, icon3);
 	display_image(96, icon2);
 	display_image(0, icon1); 
-	
-	for(;;) ;
+}
+	//for(;;) ;
 	return 0;
 }
 
