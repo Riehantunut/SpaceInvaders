@@ -151,13 +151,12 @@ static const uint8_t const font[] = {
   0, 120, 68, 66, 68, 120, 0, 0,
 };
 
-int meteor1Info[5] = {0,0,0,0,0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
-int meteor2Info[5] = {0,0,0,0,0}; // Info about meteor2
-int meteor3Info[5] = {0,0,0,0,0}; // Info about meteor3
+int meteorInfo[10][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
 
-int shot1Info[5] = {0,0,0,0,0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
-int shipInfo[5] = {0,0,0,0,0}; // Info about ship. 
+int shotInfo[50][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
+
+int shipInfo[5] = {0}; // Info about ship. 
 
 
 uint8_t  icon1[512] = {
@@ -423,97 +422,58 @@ void addMeteorExtras(int xPos, int yPos){
  // yMovement is steps in y-axis. 
  // For meteor to exist put status1 !=0, to remove it put status1=0
  // The meteor has a radius of 3.
-void meteor1Movement(int xMovement, int yMovement){
-  int xPos = meteor1Info[0];
-  int yPos = meteor1Info[1];
+void meteorMovement(int xMovement, int yMovement){
+  int i;
   
-  if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos + xMovement, yPos ,3);
-    addMeteorExtras(xPos + xMovement, yPos);
-
-  }
-  if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos, yPos+yMovement, 3);
-    addMeteorExtras(xPos + xMovement, yPos);
-  }
-  if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos+xMovement, yPos+yMovement, 3);
-    addMeteorExtras(xPos+xMovement, yPos+yMovement);
-  }
-  meteor1Info[0] = xPos + xMovement;
-  meteor1Info[1] = yPos + yMovement;
-}
-
-
-void meteor2Movement(int xMovement, int yMovement){
-  int xPos = meteor2Info[0];
-  int yPos = meteor2Info[1];
-  
-  if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos + xMovement, yPos ,3);
-    addMeteorExtras(xPos + xMovement, yPos);
+  for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+    int xPos = meteorInfo[i][0];
+    int yPos = meteorInfo[i][1];
+    
+    if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
+      removeArea(xPos, yPos, 4);
+      insertArea(xPos + xMovement, yPos ,3);
+      addMeteorExtras(xPos + xMovement, yPos);
+      
+    }
+    if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
+      removeArea(xPos, yPos, 4);
+      insertArea(xPos, yPos+yMovement, 3);
+      addMeteorExtras(xPos + xMovement, yPos);
+    }
+    if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
+      removeArea(xPos, yPos, 4);
+      insertArea(xPos+xMovement, yPos+yMovement, 3);
+      addMeteorExtras(xPos+xMovement, yPos+yMovement);
+    }
+    
+    meteorInfo[i][0] = xPos + xMovement;
+    meteorInfo[i][1] = yPos + yMovement;
     
   }
-  if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos, yPos+yMovement, 3);
-    addMeteorExtras(xPos + xMovement, yPos);
-  }
-  if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos+xMovement, yPos+yMovement, 3);
-    addMeteorExtras(xPos+xMovement, yPos+yMovement);
-  }
-  meteor2Info[0] = xPos + xMovement;
-  meteor2Info[1] = yPos + yMovement;
-}
-
-void meteor3Movement(int xMovement, int yMovement){
-  int xPos = meteor3Info[0];
-  int yPos = meteor3Info[1];
-  
-  if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos + xMovement, yPos ,3);
-    addMeteorExtras(xPos + xMovement, yPos);
-    
-  }
-  if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos, yPos+yMovement, 3);
-    addMeteorExtras(xPos + xMovement, yPos);
-  }
-  if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 4);
-    insertArea(xPos+xMovement, yPos+yMovement, 3);
-    addMeteorExtras(xPos+xMovement, yPos+yMovement);
-  }
-  meteor3Info[0] = xPos + xMovement;
-  meteor3Info[1] = yPos + yMovement;
 }
 
 // Moves shot 1.
-void shot1Movement(int xMovement, int yMovement){
-  int xPos = shot1Info[0];
-  int yPos = shot1Info[1];
-  if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
-    removeArea(xPos, yPos, 1);
-    insertArea(xPos + xMovement, yPos ,1);
+void shotMovement(int xMovement, int yMovement){
+  int i;
+  for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
+      int xPos = shotInfo[i][0];
+      int yPos = shotInfo[i][1];
+      
+      if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
+        removeArea(xPos, yPos, 1);
+        insertArea(xPos + xMovement, yPos ,1);
+      }
+      if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
+        removeArea(xPos, yPos, 1);
+        insertArea(xPos, yPos+yMovement, 1);
+      }
+      if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
+        removeArea(xPos, yPos, 1);
+        insertArea(xPos+xMovement, yPos+yMovement, 1);
+      }
+      shotInfo[i][0] = xPos + xMovement;
+      shotInfo[i][1] = yPos + yMovement;
   }
-  if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 1);
-    insertArea(xPos, yPos+yMovement, 1);
-  }
-  if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
-    removeArea(xPos, yPos, 1);
-    insertArea(xPos+xMovement, yPos+yMovement, 1);
-  }
-  shot1Info[0] = xPos + xMovement;
-  shot1Info[1] = yPos + yMovement;
 }
 
 // Moves the ship
@@ -552,42 +512,32 @@ void shipMovement(int xMovement, int yMovement){
   // This will instantiate a meteor at the coordinates and give it a movement direction.
   // Function returns 1 if successful, 0 otherwise.
   int instantiateMeteor(int xPos, int yPos, int xMovement, int yMovement){
-    if( meteor1Info[2] == 0){  // Meteor is ready to be instantiated, i.e. it is not currently on display.
-      meteor1Info[0] = xPos; //x-pos
-      meteor1Info[1] = yPos; //y-pos
-      meteor1Info[2] = 1;    // Give the meteor a status of existing.
-      meteor1Info[3] = xMovement;
-      meteor1Info[4] = yMovement;
-      return 1;
-    }
-    if( meteor2Info[2] == 0){
-      meteor2Info[0] = xPos; //x-pos
-      meteor2Info[1] = yPos; //y-pos
-      meteor2Info[2] = 1; 
-      meteor2Info[3] = xMovement;
-      meteor2Info[4] = yMovement;
-      return 1;
-    }
-    if( meteor3Info[2] == 0){
-      meteor3Info[0] = xPos; //x-pos
-      meteor3Info[1] = yPos; //y-pos
-      meteor3Info[2] = 1; 
-      meteor3Info[3] = xMovement;
-      meteor3Info[4] = yMovement;
-      return 1;
+    int i;
+    for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+      if( meteorInfo[i][2] == 0){  // Meteor is ready to be instantiated, i.e. it is not currently on display.
+        meteorInfo[i][0] = xPos; //x-pos
+        meteorInfo[i][1] = yPos; //y-pos
+        meteorInfo[i][2] = 1;    // Give the meteor a status of existing.
+        meteorInfo[i][3] = xMovement;
+        meteorInfo[i][4] = yMovement;
+        return 1;
+      }
     }
     return 0;
   }
 
 // Function to instantiate shot. Will return 1 if done succesfully.
 int instantiateShot(int xPos, int yPos, int xMovement, int yMovement){
-  if(shot1Info[2] == 0){
-    shot1Info[0] = xPos; //x-pos
-    shot1Info[1] = yPos; //y-pos
-    shot1Info[2] = 1;    // Give the meteor a status of existing.
-    shot1Info[3] = xMovement;
-    shot1Info[4] = yMovement;
-    return 1;
+  int i;
+  for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
+      if(shotInfo[i][2] == 0){
+        shotInfo[i][0] = xPos; //x-pos
+        shotInfo[i][1] = yPos; //y-pos
+        shotInfo[i][2] = 1;    // Give the meteor a status of existing.
+        shotInfo[i][3] = xMovement;
+        shotInfo[i][4] = yMovement;
+        return 1;
+      }
   }
   return 0;
 }
@@ -609,31 +559,29 @@ int instantiateShip(int xPos, int yPos, int xMovement, int yMovement){
   
 // This function moves all objects (meteors, shots & ships) according to their speeds.
 void moveObjects(){
-  if(meteor1Info[2] != 0){
-    int xMovement = meteor1Info[3];
-    int yMovement = meteor1Info[4];
-    meteor1Movement(xMovement, yMovement);
+  int i;
+  for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+  if(meteorInfo[i][2] != 0){
+    int xMovement = meteorInfo[i][3];
+    int yMovement = meteorInfo[i][4];
+    meteorMovement(xMovement, yMovement);
       }
-  if(meteor2Info[2] != 0){
-    int xMovement = meteor2Info[3];
-    int yMovement = meteor2Info[4];
-    meteor2Movement(xMovement, yMovement);
   }
-  if(meteor3Info[2] != 0){
-    int xMovement = meteor3Info[3];
-    int yMovement = meteor3Info[4];
-    meteor3Movement(xMovement, yMovement);
+      if(shotInfo[2] != 0){
+        int i;
+          for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
+          int xMovement = shotInfo[i][3];
+          int yMovement = shotInfo[i][4];
+          shotMovement(xMovement, yMovement);
+        }
   }
-  if(shot1Info[2] != 0){
-    int xMovement = shot1Info[3];
-    int yMovement = shot1Info[4];
-    shot1Movement(xMovement, yMovement);
-  }
-  if(shipInfo[2] != 0){
-    int xMovement = shipInfo[3];
-    int yMovement = shipInfo[4];
-    shipMovement(xMovement, yMovement);
-  }
+
+      if(shipInfo[2] != 0){
+        int xMovement = shipInfo[3];
+        int yMovement = shipInfo[4];
+        shipMovement(xMovement, yMovement);
+      }
+  
 }
 
 float Q_rsqrt( float number ) {  // From Quake III
@@ -659,8 +607,9 @@ float distance(int x, int y){
 
 // Checks if a meteor has gotten inte the hitbox of the ship.
 int shipCollision(){
-  int shipXPos, shipYPos, met1XPos, met1YPos, met2XPos;
-  shipInfo[0] = shipXPos;
+  //int shipXPos, shipYPos, met1XPos, met1YPos, met2XPos;
+  //shipInfo[0] = shipXPos;
+  int foo;
 
 }
   
