@@ -154,7 +154,7 @@ static const uint8_t const font[] = {
 int meteorInfo[10][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
 
 
-int shotInfo[10][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
+int shotInfo[50][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
 int shipInfo[5] = {0}; // Info about ship. 
 
@@ -422,81 +422,27 @@ void addMeteorExtras(int xPos, int yPos){
  // yMovement is steps in y-axis. 
  // For meteor to exist put status1 !=0, to remove it put status1=0
  // The meteor has a radius of 3.
-void meteorMovement(int xMovement, int yMovement){
+void meteorMovement(){
   int i;
-  
   for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
-    int xPos = meteorInfo[i][0];
-    int yPos = meteorInfo[i][1];
-    
-    if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
-      removeArea(xPos, yPos, 4);
-      insertArea(xPos + xMovement, yPos ,3);
-      addMeteorExtras(xPos + xMovement, yPos);
-      
+    if(meteorInfo[i][2] != 0){
+      removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
+      insertArea(meteorInfo[i][0] + meteorInfo[i][3], meteorInfo[i][1] + meteorInfo[i][4], 3);
+      addMeteorExtras(meteorInfo[i][0] + meteorInfo[i][3], meteorInfo[i][1] + meteorInfo[i][4]);
+      meteorInfo[i][0] += meteorInfo[i][3];
+      meteorInfo[i][1] += meteorInfo[i][4];
     }
-    if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
-      removeArea(xPos, yPos, 4);
-      insertArea(xPos, yPos+yMovement, 3);
-      addMeteorExtras(xPos + xMovement, yPos);
-    }
-    if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
-      removeArea(xPos, yPos, 4);
-      insertArea(xPos+xMovement, yPos+yMovement, 3);
-      addMeteorExtras(xPos+xMovement, yPos+yMovement);
-    }
-    
-    meteorInfo[i][0] = xPos + xMovement;
-    meteorInfo[i][1] = yPos + yMovement;
-    
   }
 }
 
 // Moves shot 1.
-void shotMovement(int xMovement, int yMovement){
-  
-  //Loops through the array of all shots.
+void shotMovement(){
   int i;
   for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
-      int xPos = shotInfo[i][0];
-      int yPos = shotInfo[i][1];
-
-      removeArea(xPos, yPos, 1);
-      insertArea(xPos + xMovement, yPos, 1);
-
-      //Old code. I don't think this is actually necessary. 
-      /*
-      if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
-        removeArea(xPos, yPos, 1);
-        insertArea(xPos + xMovement, yPos ,1);
-      }
-      if(yMovement != 0 & xMovement == 0){  //Move meteor in y-axis.
-        removeArea(xPos, yPos, 1);
-        insertArea(xPos, yPos+yMovement, 1);
-      }
-      if(yMovement != 0 & xMovement != 0){  //Move meteor in y-axis.
-        removeArea(xPos, yPos, 1);
-        insertArea(xPos+xMovement, yPos+yMovement, 1);
-      }
-      */
-
-      //Update the shot's position.
-      int xRes = xPos + xMovement;
-      int yRes = yPos + yMovement;
-      shotInfo[i][0] = xRes;
-      shotInfo[i][1] = yRes;
-
-      //If the shot's position is outside of the screen we'll delete the shot.
-      //First we remove the reference to the shot.
-      if(xRes >= 128){
-        shotInfo[i][0] = 0;
-        shotInfo[i][1] = 0;
-        shotInfo[i][2] = 0;
-        shotInfo[i][3] = 0;
-        shotInfo[i][4] = 0;
-        //Then we delete the shot from the screen.
-        removeArea(xPos, yPos, 1);
-      }      
+    removeArea(shotInfo[i][0], shotInfo[i][1], 1);
+    insertArea(shotInfo[i][0] + shotInfo[i][3], shotInfo[i][1] + shotInfo[i][4], 1);
+    shotInfo[i][0] += shotInfo[i][3];
+    shotInfo[i][1] += shotInfo[i][4];
   }
 }
 
@@ -602,27 +548,12 @@ int instantiateShip(int xPos, int yPos, int xMovement, int yMovement){
   
 // This function moves all objects (meteors, shots & ships) according to their speeds.
 void moveObjects(){
-  
-  //Moves the meteors.
-  int i;
-  for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
-    if(meteorInfo[i][2] != 0){
-      int xMovement = meteorInfo[i][3];
-      int yMovement = meteorInfo[i][4];
-      meteorMovement(xMovement, yMovement);
-        }
-    }
 
-  //Moves the shots.
-  int k;
-  for(k=0; k<sizeof(shotInfo)/sizeof(shotInfo[0]); k++){
-    if(shotInfo[k][2] != 0){
-      int xMovement = shotInfo[i][3];
-      int yMovement = shotInfo[i][4];
-      shotMovement(xMovement, yMovement);
-    }      
-  }
-
+ //Move the meteors.
+ meteorMovement();
+ 
+ //Move the shots.
+ shotMovement();
 
   //Moves the ship.
   if(shipInfo[2] != 0){
@@ -712,7 +643,7 @@ int timeCounter = 0;
 
 instantiateMeteor(120, 10, -1,1);
 instantiateMeteor(120, 25,-1,-1);
-//instantiateShot(0,20,3,1);
+//instantiateShot(20,16,1,0);
 instantiateShip(5,16, 0, 0);
 
 // Returns the status of all pushbuttons. The statuser are located in the least significant nibble with pushbuttons appearing in the order they are located on the screen.
@@ -753,8 +684,7 @@ void collectInput(void){
   switchStatus = getSwitches();
   if((switchStatus &= 0x8) == 0x8){ //Switch 4.
     //Make a shot appear.
-    instantiateShot(shipInfo[0],shipInfo[1],1,0);
-    delay(100);
+    instantiateShot(shipInfo[0],shipInfo[1],3,0);    
   }
 
   //Now change the ship's direction depending on which button is pressed.
@@ -782,6 +712,19 @@ void resetShipSpeed(void){
   shipInfo[4] = 0;
 }
 
+void clearShipShots(void){
+  int i;
+  for(i=0; i<sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
+    if(shotInfo[i][0] >= 128){
+      shotInfo[i][0] = 0;
+      shotInfo[i][1] = 0;
+      shotInfo[i][2] = 0;
+      shotInfo[i][3] = 0;
+      shotInfo[i][4] = 0;
+    }
+  }
+}
+
 
 //Main game loop.
 while(endGame != 1){
@@ -807,6 +750,7 @@ while(endGame != 1){
 
 	timeCounter++;
 	moveObjects();
+  clearShipShots();
 	
 	/* After removing this code nothing changed in the output to the screen.
 	display_image(288, icon4);
