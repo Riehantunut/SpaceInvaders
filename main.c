@@ -158,6 +158,7 @@ int meteorInfo[10][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,
 int shotInfo[50][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
 int shipInfo[5] = {0}; // Info about ship. 
+int shipHp = 3;
 
 
 uint8_t  icon1[512] = {
@@ -605,7 +606,6 @@ int main(void) {
 	AD1PCFG = 0xFFFF;
 	ODCE = 0x0;
 	TRISECLR = 0xFF;
-	PORTE = 0x0;
 	
 	/* Output pins for display signals */
 	PORTF = 0xFFFD;
@@ -762,13 +762,23 @@ void spawnMeteors(void){
     //Rand gives a number between 0-RAND_MAX.
     //Selects a predetermined spawnpoint depending on randomized number between 0-3.
     int spawnpoint = rand() % 4;
-    if(spawnpoint == 0){instantiateMeteor(120, 10, -1,1);}
-    if(spawnpoint == 1){instantiateMeteor(120, 25, -1,-1);}
+    if(spawnpoint == 0){instantiateMeteor(120, 10, -2,1);}
+    if(spawnpoint == 1){instantiateMeteor(120, 25, -2,-1);}
     if(spawnpoint == 2){instantiateMeteor(60, 20, -1,-1);}
     if(spawnpoint == 3){instantiateMeteor(10, 25, 1,-1);}
   } else {
     metSpawnTrigger++;
   }
+}
+
+//This method shows the ship's hp on the led-lights by writing to the appropriate e-register slots.
+void showHp(void){
+  int val;
+  if(shipHp >= 3){val = 0x7;}
+  if(shipHp == 2){val = 0x3;}
+  if(shipHp == 1){val = 0x1;}
+  if(shipHp <= 0){val = 0x0;}
+  PORTE = (val << 5);
 }
 
 
@@ -799,6 +809,8 @@ while(endGame != 1){
   clearShipShots();
   spawnMeteors();
   clearMeteors();
+  //checkDamage(); //Insert a method to decrese HP here.
+  showHp();
 	
 	/* After removing this code nothing changed in the output to the screen.
 	display_image(288, icon4);
