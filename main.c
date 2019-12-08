@@ -154,7 +154,7 @@ static const uint8_t const font[] = {
 int meteorInfo[10][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
 
 
-int shotInfo[50][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
+int shotInfo[10][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
 int shipInfo[5] = {0}; // Info about ship. 
 
@@ -454,11 +454,18 @@ void meteorMovement(int xMovement, int yMovement){
 
 // Moves shot 1.
 void shotMovement(int xMovement, int yMovement){
+  
+  //Loops through the array of all shots.
   int i;
   for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
       int xPos = shotInfo[i][0];
       int yPos = shotInfo[i][1];
-      
+
+      removeArea(xPos, yPos, 1);
+      insertArea(xPos + xMovement, yPos, 1);
+
+      //Old code. I don't think this is actually necessary. 
+      /*
       if(xMovement != 0 & yMovement == 0){  //Move meteor in x-axis.
         removeArea(xPos, yPos, 1);
         insertArea(xPos + xMovement, yPos ,1);
@@ -471,8 +478,25 @@ void shotMovement(int xMovement, int yMovement){
         removeArea(xPos, yPos, 1);
         insertArea(xPos+xMovement, yPos+yMovement, 1);
       }
-      shotInfo[i][0] = xPos + xMovement;
-      shotInfo[i][1] = yPos + yMovement;
+      */
+
+      //Update the shot's position.
+      int xRes = xPos + xMovement;
+      int yRes = yPos + yMovement;
+      shotInfo[i][0] = xRes;
+      shotInfo[i][1] = yRes;
+
+      //If the shot's position is outside of the screen we'll delete the shot.
+      //First we remove the reference to the shot.
+      if(xRes >= 128){
+        shotInfo[i][0] = 0;
+        shotInfo[i][1] = 0;
+        shotInfo[i][2] = 0;
+        shotInfo[i][3] = 0;
+        shotInfo[i][4] = 0;
+        //Then we delete the shot from the screen.
+        removeArea(xPos, yPos, 1);
+      }      
   }
 }
 
@@ -480,6 +504,24 @@ void shotMovement(int xMovement, int yMovement){
 void shipMovement(int xMovement, int yMovement){
   int xPos = shipInfo[0];
   int yPos = shipInfo[1];
+
+  removeArea(xPos, yPos, 2);
+  removeArea(xPos+2, yPos, 1);
+  removeArea(xPos+4, yPos, 0);
+  insertArea(xPos+xMovement, yPos+yMovement,2);
+  insertArea(xPos+xMovement+2, yPos+yMovement,1);
+  insertArea(xPos+xMovement+4, yPos+yMovement,0);
+
+  //The code below doesn't seem to be needed as claimed. Kept for safekeeping.
+  /*
+  //If ship is not moving just redraw it on the screen.
+  if(xMovement == 0 & yMovement == 0){
+    removeArea(xPos, yPos, 2);
+    insertArea(xPos, yPos, 2);
+  }
+  */
+
+  /*
   if(xMovement != 0 & yMovement == 0){  //Move ship in x-axis.
     removeArea(xPos, yPos, 2);
     removeArea(xPos+2, yPos, 1);
@@ -504,6 +546,7 @@ void shipMovement(int xMovement, int yMovement){
     insertArea(xPos+xMovement+2, yPos+yMovement, 1);
     insertArea(xPos+xMovement+4, yPos+yMovement, 0);
   }
+  */
   shipInfo[0] = xPos + xMovement;
   shipInfo[1] = yPos + yMovement;
 }
@@ -533,7 +576,7 @@ int instantiateShot(int xPos, int yPos, int xMovement, int yMovement){
       if(shotInfo[i][2] == 0){
         shotInfo[i][0] = xPos; //x-pos
         shotInfo[i][1] = yPos; //y-pos
-        shotInfo[i][2] = 1;    // Give the meteor a status of existing.
+        shotInfo[i][2] = 1;    // Give the shot a status of existing.
         shotInfo[i][3] = xMovement;
         shotInfo[i][4] = yMovement;
         return 1;
@@ -547,7 +590,7 @@ int instantiateShip(int xPos, int yPos, int xMovement, int yMovement){
   if(shipInfo[2] == 0){
     shipInfo[0] = xPos; //x-pos
     shipInfo[1] = yPos; //y-pos
-    shipInfo[2] = 1;    // Give the meteor a status of existing.
+    shipInfo[2] = 1;    // Give the ship a status of existing.
     shipInfo[3] = xMovement;
     shipInfo[4] = yMovement;
     return 1;
@@ -559,29 +602,34 @@ int instantiateShip(int xPos, int yPos, int xMovement, int yMovement){
   
 // This function moves all objects (meteors, shots & ships) according to their speeds.
 void moveObjects(){
+  
+  //Moves the meteors.
   int i;
   for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
-  if(meteorInfo[i][2] != 0){
-    int xMovement = meteorInfo[i][3];
-    int yMovement = meteorInfo[i][4];
-    meteorMovement(xMovement, yMovement);
-      }
-  }
-      if(shotInfo[2] != 0){
-        int i;
-          for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
-          int xMovement = shotInfo[i][3];
-          int yMovement = shotInfo[i][4];
-          shotMovement(xMovement, yMovement);
+    if(meteorInfo[i][2] != 0){
+      int xMovement = meteorInfo[i][3];
+      int yMovement = meteorInfo[i][4];
+      meteorMovement(xMovement, yMovement);
         }
+    }
+
+  //Moves the shots.
+  int k;
+  for(k=0; k<sizeof(shotInfo)/sizeof(shotInfo[0]); k++){
+    if(shotInfo[k][2] != 0){
+      int xMovement = shotInfo[i][3];
+      int yMovement = shotInfo[i][4];
+      shotMovement(xMovement, yMovement);
+    }      
   }
 
-      if(shipInfo[2] != 0){
-        int xMovement = shipInfo[3];
-        int yMovement = shipInfo[4];
-        shipMovement(xMovement, yMovement);
-      }
-  
+
+  //Moves the ship.
+  if(shipInfo[2] != 0){
+    int xMovement = shipInfo[3];
+    int yMovement = shipInfo[4];
+    shipMovement(xMovement, yMovement);
+  }
 }
 
 float Q_rsqrt( float number ) {  // From Quake III
@@ -625,7 +673,7 @@ int main(void) {
 	PORTE = 0x0;
 	
 	/* Output pins for display signals */
-	PORTF = 0xFFFF;
+	PORTF = 0xFFFD;
 	PORTG = (1 << 9);
 	ODCF = 0x0;
 	ODCG = 0x0;
@@ -633,8 +681,15 @@ int main(void) {
 	TRISGCLR = 0x200;
 	
 	/* Set up input pins */
-	TRISDSET = (1 << 8);
+	
+  //Function unclear.
+  TRISDSET = (1 << 8);
 	TRISFSET = (1 << 1);
+
+  //Setting up the pushbuttons to register input.
+  TRISD = (0x47 << 5); //This sets BTN4/3/2 to register as input.
+  TRISF = (0x1 << 1); //This sets up BTN1 to register as input.
+
 	
 	/* Set up SPI as master */
 	SPI2CON = 0;
@@ -657,30 +712,108 @@ int timeCounter = 0;
 
 instantiateMeteor(120, 10, -1,1);
 instantiateMeteor(120, 25,-1,-1);
-instantiateShot(0,20,3,1);
-instantiateShip(0,16, 2, 0);
+//instantiateShot(0,20,3,1);
+instantiateShip(5,16, 0, 0);
 
+// Returns the status of all pushbuttons. The statuser are located in the least significant nibble with pushbuttons appearing in the order they are located on the screen.
+int getbtns(void){
+  //Get status for BTN 4-2.
+  int retPortD = PORTD;
+  retPortD = retPortD >> 4; //1110.
+  retPortD &= 0xE; 
+
+  //Get status for BTN 1.
+  int retPortF = PORTF;
+  retPortF = retPortF >> 1;
+  retPortF &= 0x1; //0001.
+
+  int btnStatus = retPortD | retPortF; //If all buttons are pushed it gives 1111.
+  return btnStatus;
+}
+
+//Returns teh value of all active switches.
+int getSwitches(void){
+  //Gets the status for switch 4.
+  int retPortD = PORTD;
+  retPortD = retPortD >> 8; //Put the status of switch 4 at bit 3. [3-0]
+  retPortD &= 0x8; //1000.
+
+  int switchStatus = retPortD;
+  return switchStatus;
+}
+
+//The purpose of this function is to collect user input and set the correct speeds accordingly.
+//There is already a function that updates the movement, we are looking to manipulate the speed by pressing buttons.
+void collectInput(void){
+  //Get the status for the buttons.
+  int btnStatus;
+  int switchStatus;
+
+  //Get the status of the switches.
+  switchStatus = getSwitches();
+  if((switchStatus &= 0x8) == 0x8){ //Switch 4.
+    //Make a shot appear.
+    instantiateShot(shipInfo[0],shipInfo[1],1,0);
+    delay(100);
+  }
+
+  //Now change the ship's direction depending on which button is pressed.
+  btnStatus = getbtns();
+  if((btnStatus &= 0x1) == 0x1){ // Btn 1
+    shipInfo[4] = -1;
+  }
+  btnStatus = getbtns();
+  if((btnStatus &= 0x2) == 0x2){ // Btn 2
+    shipInfo[4] = 1;
+  }
+  btnStatus = getbtns();
+  if((btnStatus &= 0x4) == 0x4){ // Btn 3
+    shipInfo[3] = 1;
+  }
+  btnStatus = getbtns();
+  if((btnStatus &= 0x8) == 0x8){ // Btn 4
+    shipInfo[3] = -1;
+  }
+
+}
+
+void resetShipSpeed(void){
+  shipInfo[3] = 0;
+  shipInfo[4] = 0;
+}
+
+
+//Main game loop.
 while(endGame != 1){
+  //The screen is divided into sections. These sections are now displayed.
 	display_image(288, icon4);
 	display_image(192, icon3);
 	display_image(96, icon2);
 	display_image(0, icon1);
-	
+
+  //Artificial delay.
 	int j;
 	for(j = 0; j < 100000; j++) { /* Wait */
 		int foo;
 		foo = j +1;
 		}	
 	/* x,y, status */
-	
+
+  //Resets the speed of the ship to 0.
+  resetShipSpeed();
+
+	//Collects input from the pushbuttons.
+  collectInput();
+
 	timeCounter++;
 	moveObjects();
 	
-	
+	/* After removing this code nothing changed in the output to the screen.
 	display_image(288, icon4);
 	display_image(192, icon3);
 	display_image(96, icon2);
 	display_image(0, icon1); 
+  */
 }
 	//for(;;) ;
 	return 0;
