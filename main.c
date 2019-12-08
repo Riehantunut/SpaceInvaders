@@ -586,9 +586,20 @@ float distance(int x, int y){
 
 // Checks if a meteor has gotten inte the hitbox of the ship.
 int shipCollision(){
-  //int shipXPos, shipYPos, met1XPos, met1YPos, met2XPos;
-  //shipInfo[0] = shipXPos;
-  int foo;
+  int shipXPos, shipYPos, metXPos, metYPos;
+  shipInfo[0] = shipXPos;
+  shipInfo[1] = shipYPos;
+  int i, deltaX, deltaY;
+  for (i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+    meteorInfo[i][0] = metXPos;
+    meteorInfo[i][1] = metYPos;
+    deltaX = abs(shipXPos - metXPos);
+    deltaY = abs(shipYPos - metYPos);
+    if(distance(deltaX, deltaY) < 3){ // Ships hitbox is 3 pixels around ship.
+      insertArea(50,15,50);
+    }
+  }
+  
 
 }
   
