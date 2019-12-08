@@ -584,7 +584,7 @@ float distance(int x, int y){
   return toReturn;
 }
 
-// Checks if a meteor has gotten inte the hitbox of the ship.
+// Checks if a meteor has gotten inte the hitbox of the ship. Returns 1 if collision occurred.
 int shipCollision(){
   int shipXPos, shipYPos, metXPos, metYPos;
   shipInfo[0] = shipXPos;
@@ -597,10 +597,10 @@ int shipCollision(){
     deltaY = abs(shipYPos - metYPos);
     if(distance(deltaX, deltaY) < 3){ // Ships hitbox is 3 pixels around ship.
       insertArea(50,15,50);
+      return 1;
     }
   }
-  
-
+  return 0;
 }
   
 int main(void) {
@@ -762,6 +762,7 @@ while(endGame != 1){
 	timeCounter++;
 	moveObjects();
   clearShipShots();
+  shipCollision();  // Check if ship has collided. Function returns 1 if collision has occurred.
 	
 	/* After removing this code nothing changed in the output to the screen.
 	display_image(288, icon4);
