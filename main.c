@@ -1,6 +1,6 @@
 #include <pic32mx.h>
 #include <stdint.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 
 #define DISPLAY_VDD PORTFbits.RF6
 #define DISPLAY_VBATT PORTFbits.RF5
@@ -17,6 +17,7 @@
 #define DISPLAY_RESET_PORT PORTG
 #define DISPLAY_RESET_MASK 0x200
 
+void *stdout;
 
 char textbuffer[4][16];
 
@@ -451,6 +452,9 @@ void shipMovement(int xMovement, int yMovement){
   int xPos = shipInfo[0];
   int yPos = shipInfo[1];
 
+  if(xPos+xMovement >= 128 || xPos+xMovement <= 0){xMovement = 0;}
+  if(yPos+yMovement >= 32 || yPos+yMovement <= 0){yMovement = 0;}
+
   removeArea(xPos, yPos, 2);
   removeArea(xPos+2, yPos, 1);
   removeArea(xPos+4, yPos, 0);
@@ -639,10 +643,12 @@ int main(void) {
 	
 int endGame = 0;
 int timeCounter = 0;
+int shotTimer = 0;
+int metSpawnTrigger = 0;
 
 
-instantiateMeteor(120, 10, -1,1);
-instantiateMeteor(120, 25,-1,-1);
+//instantiateMeteor(120, 10, -1,1);
+//instantiateMeteor(120, 25,-1,-1);
 //instantiateShot(20,16,1,0);
 instantiateShip(5,16, 0, 0);
 
@@ -684,25 +690,30 @@ void collectInput(void){
   switchStatus = getSwitches();
   if((switchStatus &= 0x8) == 0x8){ //Switch 4.
     //Make a shot appear.
-    instantiateShot(shipInfo[0],shipInfo[1],3,0);    
+    if(shotTimer = 500){
+      shotTimer = 0;
+      instantiateShot(shipInfo[0],shipInfo[1],4,0); 
+    } else {
+      shotTimer++;
+    }
   }
 
   //Now change the ship's direction depending on which button is pressed.
   btnStatus = getbtns();
   if((btnStatus &= 0x1) == 0x1){ // Btn 1
-    shipInfo[4] = -1;
+    shipInfo[4] = -2;
   }
   btnStatus = getbtns();
   if((btnStatus &= 0x2) == 0x2){ // Btn 2
-    shipInfo[4] = 1;
+    shipInfo[4] = 2;
   }
   btnStatus = getbtns();
   if((btnStatus &= 0x4) == 0x4){ // Btn 3
-    shipInfo[3] = 1;
+    shipInfo[3] = 2;
   }
   btnStatus = getbtns();
   if((btnStatus &= 0x8) == 0x8){ // Btn 4
-    shipInfo[3] = -1;
+    shipInfo[3] = -2;
   }
 
 }
@@ -712,16 +723,51 @@ void resetShipSpeed(void){
   shipInfo[4] = 0;
 }
 
+//This method clears the array containing shots.
 void clearShipShots(void){
   int i;
   for(i=0; i<sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
     if(shotInfo[i][0] >= 128){
+      removeArea(shotInfo[i][0], shotInfo[i][1], 1);
       shotInfo[i][0] = 0;
       shotInfo[i][1] = 0;
       shotInfo[i][2] = 0;
       shotInfo[i][3] = 0;
       shotInfo[i][4] = 0;
     }
+  }
+}
+
+//This method clears the array containing meteors.
+void clearMeteors(void){
+  int i;
+  for(i=0; i<sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+    if(meteorInfo[i][0] >= 128 || meteorInfo[i][0] <= 0 || meteorInfo[i][1] >= 32 || meteorInfo[i][1] <= 0){
+      removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
+      meteorInfo[i][0] = 0;
+      meteorInfo[i][1] = 0;
+      meteorInfo[i][2] = 0;
+      meteorInfo[i][3] = 0;
+      meteorInfo[i][4] = 0;      
+    }
+  }
+}
+
+//This method checks if we're going to spawn a meteor. If we spawn a meteor we'll reset the counter.
+void spawnMeteors(void){
+  if(metSpawnTrigger >= 50){
+    metSpawnTrigger = 0;
+
+    //Generate a random number to determine meteor spawn location.
+    //Rand gives a number between 0-RAND_MAX.
+    //Selects a predetermined spawnpoint depending on randomized number between 0-3.
+    int spawnpoint = rand() % 4;
+    if(spawnpoint == 0){instantiateMeteor(120, 10, -1,1);}
+    if(spawnpoint == 1){instantiateMeteor(120, 25, -1,-1);}
+    if(spawnpoint == 2){instantiateMeteor(60, 20, -1,-1);}
+    if(spawnpoint == 3){instantiateMeteor(10, 25, 1,-1);}
+  } else {
+    metSpawnTrigger++;
   }
 }
 
@@ -751,6 +797,8 @@ while(endGame != 1){
 	timeCounter++;
 	moveObjects();
   clearShipShots();
+  spawnMeteors();
+  clearMeteors();
 	
 	/* After removing this code nothing changed in the output to the screen.
 	display_image(288, icon4);
