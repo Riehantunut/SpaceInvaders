@@ -439,7 +439,7 @@ void meteorMovement(){
   }
 }
 
-// Moves shot 1.
+// Moves shot.
 void shotMovement(){
   int i;
   for( i = 0; i < sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
@@ -465,41 +465,6 @@ void shipMovement(int xMovement, int yMovement){
   insertArea(xPos+xMovement+2, yPos+yMovement,1);
   insertArea(xPos+xMovement+4, yPos+yMovement,0);
 
-  //The code below doesn't seem to be needed as claimed. Kept for safekeeping.
-  /*
-  //If ship is not moving just redraw it on the screen.
-  if(xMovement == 0 & yMovement == 0){
-    removeArea(xPos, yPos, 2);
-    insertArea(xPos, yPos, 2);
-  }
-  */
-
-  /*
-  if(xMovement != 0 & yMovement == 0){  //Move ship in x-axis.
-    removeArea(xPos, yPos, 2);
-    removeArea(xPos+2, yPos, 1);
-    removeArea(xPos+4, yPos, 0);
-    insertArea(xPos+xMovement, yPos ,2);
-    insertArea(xPos+xMovement+2, yPos ,1);
-    insertArea(xPos+xMovement+4, yPos ,0);
-  }
-  if(yMovement != 0 & xMovement == 0){  //Move ship in y-axis.
-    removeArea(xPos, yPos, 2);
-    removeArea(xPos+2, yPos, 1);
-    removeArea(xPos+4, yPos, 0);
-    insertArea(xPos, yPos+yMovement, 2);
-    insertArea(xPos+2, yPos+yMovement, 1);
-    insertArea(xPos+4, yPos+yMovement, 0);
-  }
-  if(yMovement != 0 & xMovement != 0){  //Move ship in y-axis.
-    removeArea(xPos, yPos, 2);
-    removeArea(xPos+2, yPos, 1);
-    removeArea(xPos+4, yPos, 0);
-    insertArea(xPos+xMovement, yPos+yMovement, 2);
-    insertArea(xPos+xMovement+2, yPos+yMovement, 1);
-    insertArea(xPos+xMovement+4, yPos+yMovement, 0);
-  }
-  */
   shipInfo[0] = xPos + xMovement;
   shipInfo[1] = yPos + yMovement;
 }
@@ -551,8 +516,6 @@ int instantiateShip(int xPos, int yPos, int xMovement, int yMovement){
   return 0;
 }
 
-
-
 // This function moves all objects (meteors, shots & ships) according to their speeds.
 void moveObjects(){
 
@@ -568,27 +531,6 @@ void moveObjects(){
     int yMovement = shipInfo[4];
     shipMovement(xMovement, yMovement);
   }
-}
-
-float Q_rsqrt( float number ) {  // From Quake III 1/(x)^.5
-  long i;
-  float x2, y;
-  const float threehalfs = 1.5F;
-
-  x2 = number * 0.5F;
-  y  = number;
-  i  = * ( long * ) &y;                       // evil floating point bit level hacking
-  i  = 0x5f3759df - ( i >> 1 );               // what is this?
-  y  = * ( float * ) &i;
-  y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
-  return y;
-}
-
-// Checks distance between two points using pythagoras.
-float distance(int x, int y){
-  float toReturn = x*x + y*y;
-  toReturn = 1/Q_rsqrt(toReturn);
-  return toReturn;
 }
 
 // Checks if a meteor has gotten inte the hitbox of the ship.
@@ -692,7 +634,6 @@ void collectInput(void){
   if((btnStatus &= 0x8) == 0x8){ // Btn 4
     shipInfo[3] = -2;
   }
-
 }
 
 void resetShipSpeed(void){
@@ -759,8 +700,17 @@ void showHp(void){
 }
 
 
+void resetShip(){
+  removeArea(shipInfo[0], shipInfo[1], 10);
+  shipInfo[0] = 5;
+  shipInfo[1] = 16;
+  shipInfo[2] = 0;
+}
+
 
 int main(void) {
+  int tick = 100000; // One tick
+  
 	/* Set up peripheral bus clock */
 	OSCCON &= ~0x180000;
 	OSCCON |= 0x080000;
@@ -802,70 +752,75 @@ int main(void) {
 	SPI2CONSET = 0x8000;
 
 	display_init();
-	display_update();
-
-int endGame = 0;
-int timeCounter = 0;
-
-
-
-//instantiateMeteor(120, 10, -1,1);
-//instantiateMeteor(120, 25,-1,-1);
-//instantiateShot(20,16,1,0);
-instantiateShip(5,16, 0, 0);
-
-
-//Main game loop.
-while(endGame != 1){
-
-	if(shipHp<1){
-	endGame = 1;
-	}
-  //The screen is divided into sections. These sections are now displayed.
-	display_image(288, icon4);
-	display_image(192, icon3);
-	display_image(96, icon2);
-	display_image(0, icon1);
-
 	
+	int endGame = 0;
+	int timeCounter = 0;
+	int menuSelect;
+	int exitMenu;
+	
+while(true){
+    exitMenu = 0;
+      
+      display_string(0,"  1.Easy");
+      display_string(1,"  2.Medium");
+      display_string(2,"  3.HARD");
+      display_update();
+      menuSelect = 1;
+      while(exitMenu != 1){
+          collectInput();
+          delay(tick);
+          exitMenu = 1;
+      }
+	 
+    //Start game
+    shipHp = 3;
+    endGame = 0;
+    timeCounter = 0;
+    instantiateShip(5,16, 0, 0);
+    //Main game loop.
+    while(endGame != 1){
+    
+    	if(shipHp<1){
+    	endGame = 1;
+    	}
+      //The screen is divided into sections. These sections are now displayed.
+    	display_image(288, icon4);
+    	display_image(192, icon3);
+    	display_image(96, icon2);
+    	display_image(0, icon1);
+    
+      //Artificial delay.
+      delay(tick);
+    
+      //Resets the speed of the ship to 0.
+      resetShipSpeed();
+    
+    	//fs input from the pushbuttons.
+      collectInput();
+    
+    	timeCounter++;
+    	moveObjects();
+      clearShipShots();
+      spawnMeteors();
+      clearMeteors();
+      shipCollision();
+      shotCollision();
+      showHp();
+    
+    }
+    display_string(0,"");
+    display_string(1, "");
+    display_string(2,"GAME OVER!");
+    display_update();
+    delay(tick*70);
+    resetShip();
 
-  //Artificial delay.
-	int j;
-	for(j = 0; j < 100000; j++) { /* Wait */
-		int foo;
-		foo = j +1;
-		}
-	/* x,y, status */
 
-  //Resets the speed of the ship to 0.
-  resetShipSpeed();
-
-	//fs input from the pushbuttons.
-  collectInput();
-
-	timeCounter++;
-	moveObjects();
-  clearShipShots();
-  spawnMeteors();
-  clearMeteors();
-  shipCollision();
-  shotCollision();
-  showHp();
-
-	/* After removing this code nothing changed in the output to the screen.
-	display_image(288, icon4);
-	display_image(192, icon3);
-	display_image(96, icon2);
-	display_image(0, icon1);
-  */
+    	
 }
-	while(true){
-		display_string(2,"GAME OVER!");
-		display_update();
-	}
-
 	//for(;;) ;
 	return 0;
 }
+
 
 
