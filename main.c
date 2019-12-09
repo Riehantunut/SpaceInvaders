@@ -152,15 +152,16 @@ static const uint8_t const font[] = {
   0, 120, 68, 66, 68, 120, 0, 0,
 };
 
-int meteorInfo[10][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
+int meteorInfo[15][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
 
 
-int shotInfo[50][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
+int shotInfo[60][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
 int shipInfo[5] = {0}; // Info about ship.
 int shipHp = 3;
 int shotTimer = 0;
 int metSpawnTrigger = 0;
+int destroyedMeteors = 0;
 
 
 uint8_t  icon1[512] = {
@@ -534,7 +535,7 @@ void moveObjects(){
 }
 
 // Checks if a meteor has gotten inte the hitbox of the ship.
-void shipCollision(){
+void collisionDetection(){
   int i;
   for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
     if(meteorInfo[i][2] != 0){
@@ -549,27 +550,25 @@ void shipCollision(){
       }
     }
   }
-}
-
-// Checks if a shot has gotten inte the hitbox of a meteor.
-void shotCollision(){
   int s;
   for(s=0; s<sizeof(shotInfo)/sizeof(shotInfo[0]); s++){
-	  int i;
-	  for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
-	    if(meteorInfo[i][2] != 0){
-	      if(!(shotInfo[s][0]+2 < meteorInfo[i][0]-2 || meteorInfo[i][0]+2 < shotInfo[s][0]-2 || shotInfo[s][1]+2 < meteorInfo[i][1]-2 || meteorInfo[i][1]+2 < shotInfo[s][1]-2)){
-		removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
-		meteorInfo[i][0] = 0;
-		meteorInfo[i][1] = 0;
-		meteorInfo[i][2] = 0;
-		meteorInfo[i][3] = 0;
-		meteorInfo[i][4] = 0;
-	      }
-	    }
-	  }
+    int i;
+    for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+      if(meteorInfo[i][2] != 0){
+        if(!(shotInfo[s][0]+2 < meteorInfo[i][0]-2 || meteorInfo[i][0]+2 < shotInfo[s][0]-2 || shotInfo[s][1]+2 < meteorInfo[i][1]-2 || meteorInfo[i][1]+2 < shotInfo[s][1]-2)){
+          removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
+          destroyedMeteors++;
+          meteorInfo[i][0] = 0;
+          meteorInfo[i][1] = 0;
+          meteorInfo[i][2] = 0;
+          meteorInfo[i][3] = 0;
+          meteorInfo[i][4] = 0;
+        }
+      }
+    }
   }
 }
+
 
 // Returns the status of all pushbuttons. The statuser are located in the least significant nibble with pushbuttons appearing in the order they are located on the screen.
 int getbtns(void){
@@ -600,7 +599,7 @@ int getSwitches(void){
 
 //The purpose of this function is to collect user input and set the correct speeds accordingly.
 //There is already a function that updates the movement, we are looking to manipulate the speed by pressing buttons.
-void collectInput(void){
+void collectShipInput(void){
   //Get the status for the buttons.
   int btnStatus;
   int switchStatus;
@@ -671,19 +670,39 @@ void clearMeteors(void){
   }
 }
 
+// Puts input to random sign (ex. x=2 can either be -2 to +2)
+int randSign(int x){
+  int random = rand()%2;
+  if(random == 0){
+    return -x;
+  }
+  return x;
+}
+
 //This method checks if we're going to spawn a meteor. If we spawn a meteor we'll reset the counter.
-void spawnMeteors(void){
-  if(metSpawnTrigger >= 50){
+void spawnMeteors(int difficulty){
+  difficulty++; //Easy =1, Medium=2, Hard=3
+  int spawnLimit = 30/(difficulty*2);
+  if(metSpawnTrigger >= spawnLimit){
     metSpawnTrigger = 0;
 
     //Generate a random number to determine meteor spawn location.
     //Rand gives a number between 0-RAND_MAX.
-    //Selects a predetermined spawnpoint depending on randomized number between 0-3.
+    //Selects a predetermined spawnside depending on randomized number between 0-3.
     int spawnpoint = rand() % 4;
-    if(spawnpoint == 0){instantiateMeteor(120, 10, -2,1);}
-    if(spawnpoint == 1){instantiateMeteor(120, 25, -2,-1);}
-    if(spawnpoint == 2){instantiateMeteor(60, 20, -1,-1);}
-    if(spawnpoint == 3){instantiateMeteor(10, 25, 1,-1);}
+    switch(spawnpoint){
+    case 0:
+    case 1:
+      instantiateMeteor(126, rand()%15+10, -(rand()%3)-1,randSign(rand()%2)); // Spawns meteor in the middle of right side.
+      break;
+    case 2:
+      instantiateMeteor(rand()%80+30, 1, randSign(rand()%3),rand()%3+1); // Spawns meteor from the top
+      break;
+    case 3:
+      instantiateMeteor(rand()%80+30, 30, randSign(rand()%3),-(rand()%3+1));  // From the bottom
+      break;
+    }
+
   } else {
     metSpawnTrigger++;
   }
@@ -700,12 +719,29 @@ void showHp(void){
 }
 
 
-void resetShip(){
-  removeArea(shipInfo[0], shipInfo[1], 10);
+void resetObjects(){
+  int i;
+  for(i=0; i<sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+      meteorInfo[i][0] = 0;
+      meteorInfo[i][1] = 0;
+      meteorInfo[i][2] = 0;
+      meteorInfo[i][3] = 0;
+      meteorInfo[i][4] = 0;
+  }
+    for(i=0; i<sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
+        removeArea(shotInfo[i][0], shotInfo[i][1], 4);
+        shotInfo[i][0] = 0;
+        shotInfo[i][1] = 0;
+        shotInfo[i][2] = 0;
+        shotInfo[i][3] = 0;
+        shotInfo[i][4] = 0;
+      
+    
   shipInfo[0] = 5;
   shipInfo[1] = 16;
   shipInfo[2] = 0;
-}
+    }
+  }
 
 
 int main(void) {
@@ -755,21 +791,45 @@ int main(void) {
 	
 	int endGame = 0;
 	int timeCounter = 0;
-	int menuSelect;
+	int gameDifficulty;
 	int exitMenu;
+	display_string(1,"Welcome to");
+	display_string(2,"Space Invader!");
+	display_update();
+	delay(tick*80);
+	display_string(1, "");
+	display_string(2,"");
+	
 	
 while(true){
     exitMenu = 0;
       
       display_string(0,"  1.Easy");
       display_string(1,"  2.Medium");
-      display_string(2,"  3.HARD");
+      display_string(2,"  3.Hard");
+      char scoreStr = "Score: ", 10;
+      display_string(3,scoreStr);
       display_update();
-      menuSelect = 1;
+      removeArea(15, 60, 130); // Reset screen
+      int buttonInput;
+      
       while(exitMenu != 1){
-          collectInput();
+          switch(getbtns()) {
+          case 0x8:
+            gameDifficulty = 0;
+            exitMenu = 1;
+            break;
+          case 0x4:
+            gameDifficulty = 1;
+            exitMenu = 1;
+            break;
+          case 0x2:
+            gameDifficulty = 2;
+            exitMenu = 1;
+            break;
+          }
           delay(tick);
-          exitMenu = 1;
+          
       }
 	 
     //Start game
@@ -796,27 +856,26 @@ while(true){
       resetShipSpeed();
     
     	//fs input from the pushbuttons.
-      collectInput();
+      collectShipInput();
     
     	timeCounter++;
     	moveObjects();
       clearShipShots();
-      spawnMeteors();
+      spawnMeteors(gameDifficulty); // Meteors spawn in different rates depending on difficulty.
       clearMeteors();
-      shipCollision();
-      shotCollision();
+      collisionDetection();
       showHp();
     
     }
     display_string(0,"");
     display_string(1, "");
     display_string(2,"GAME OVER!");
+    display_string(3, "");
     display_update();
     delay(tick*70);
-    resetShip();
+    destroyedMeteors = 0;
+    resetObjects();
 
-
-    	
 }
 	//for(;;) ;
 	return 0;
