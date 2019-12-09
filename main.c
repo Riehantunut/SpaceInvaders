@@ -155,13 +155,12 @@ static const uint8_t const font[] = {
 int meteorInfo[15][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,yMovement}
 
 
-int shotInfo[60][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
+int shotInfo[70][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
 int shipInfo[5] = {0}; // Info about ship.
 int shipHp = 3;
 int shotTimer = 0;
 int metSpawnTrigger = 0;
-int destroyedMeteors = 0;
 
 
 uint8_t  icon1[512] = {
@@ -557,7 +556,6 @@ void collisionDetection(){
       if(meteorInfo[i][2] != 0){
         if(!(shotInfo[s][0]+2 < meteorInfo[i][0]-2 || meteorInfo[i][0]+2 < shotInfo[s][0]-2 || shotInfo[s][1]+2 < meteorInfo[i][1]-2 || meteorInfo[i][1]+2 < shotInfo[s][1]-2)){
           removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
-          destroyedMeteors++;
           meteorInfo[i][0] = 0;
           meteorInfo[i][1] = 0;
           meteorInfo[i][2] = 0;
@@ -608,7 +606,7 @@ void collectShipInput(void){
   switchStatus = getSwitches();
   if((switchStatus &= 0x8) == 0x8){ //Switch 4.
     //Make a shot appear.
-    if(shotTimer = 10000){
+    if(shotTimer = 100000000){
       shotTimer = 0;
       instantiateShot(shipInfo[0],shipInfo[1],4,0);
     } else {
@@ -807,8 +805,6 @@ while(true){
       display_string(0,"  1.Easy");
       display_string(1,"  2.Medium");
       display_string(2,"  3.Hard");
-      char scoreStr = "Score: ", 10;
-      display_string(3,scoreStr);
       display_update();
       removeArea(15, 60, 130); // Reset screen
       int buttonInput;
@@ -873,7 +869,7 @@ while(true){
     display_string(3, "");
     display_update();
     delay(tick*70);
-    destroyedMeteors = 0;
+
     resetObjects();
 
 }
