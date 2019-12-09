@@ -1,6 +1,6 @@
 #include <pic32mx.h>
 #include <stdint.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 
 #define DISPLAY_VDD PORTFbits.RF6
 #define DISPLAY_VBATT PORTFbits.RF5
@@ -17,6 +17,7 @@
 #define DISPLAY_RESET_PORT PORTG
 #define DISPLAY_RESET_MASK 0x200
 
+void *stdout;
 
 char textbuffer[4][16];
 
@@ -156,7 +157,10 @@ int meteorInfo[10][5] = {0}; // Info about meteor1, {xPos,yPos,status,xMovement,
 
 int shotInfo[50][5] = {0}; // Info about shot 1  {xPos,yPos,status,xMovement,yMovement}
 
-int shipInfo[5] = {0}; // Info about ship. 
+int shipInfo[5] = {0}; // Info about ship.
+int shipHp = 3;
+int shotTimer = 0;
+int metSpawnTrigger = 0;
 
 
 uint8_t  icon1[512] = {
@@ -252,28 +256,28 @@ void display_init() {
 	delay(10);
 	DISPLAY_VDD_PORT &= ~DISPLAY_VDD_MASK;
 	delay(1000000);
-	
+
 	spi_send_recv(0xAE);
 	DISPLAY_RESET_PORT &= ~DISPLAY_RESET_MASK;
 	delay(10);
 	DISPLAY_RESET_PORT |= DISPLAY_RESET_MASK;
 	delay(10);
-	
+
 	spi_send_recv(0x8D);
 	spi_send_recv(0x14);
-	
+
 	spi_send_recv(0xD9);
 	spi_send_recv(0xF1);
-	
+
 	DISPLAY_VBATT_PORT &= ~DISPLAY_VBATT_MASK;
 	delay(10000000);
-	
+
 	spi_send_recv(0xA1);
 	spi_send_recv(0xC8);
-	
+
 	spi_send_recv(0xDA);
 	spi_send_recv(0x20);
-	
+
 	spi_send_recv(0xAF);
 }
 
@@ -283,7 +287,7 @@ void display_string(int line, char *s) {
 		return;
 	if(!s)
 		return;
-	
+
 	for(i = 0; i < 16; i++)
 		if(*s) {
 			textbuffer[line][i] = *s;
@@ -294,17 +298,17 @@ void display_string(int line, char *s) {
 
 void display_image(int x, const uint8_t *data) {
 	int i, j;
-	
+
 	for(i = 0; i < 4; i++) {
 		DISPLAY_COMMAND_DATA_PORT &= ~DISPLAY_COMMAND_DATA_MASK;
 		spi_send_recv(0x22);
 		spi_send_recv(i);
-		
+
 		spi_send_recv(x & 0xF);
 		spi_send_recv(0x10 | ((x >> 4) & 0xF));
-		
+
 		DISPLAY_COMMAND_DATA_PORT |= DISPLAY_COMMAND_DATA_MASK;
-		
+
 		for(j = 0; j < 32; j++)
 			spi_send_recv(~data[i*32 + j]);
 	}
@@ -317,32 +321,32 @@ void display_update() {
 		DISPLAY_COMMAND_DATA_PORT &= ~DISPLAY_COMMAND_DATA_MASK;
 		spi_send_recv(0x22);
 		spi_send_recv(i);
-		
+
 		spi_send_recv(0x0);
 		spi_send_recv(0x10);
-		
+
 		DISPLAY_COMMAND_DATA_PORT |= DISPLAY_COMMAND_DATA_MASK;
-		
+
 		for(j = 0; j < 16; j++) {
 		  c = textbuffer[i][j];
 		  if(c & 0x80)
 		    continue;
-		  
+
 		  for(k = 0; k < 8; k++)
 		    spi_send_recv(font[c*8 + k]);
 		}
-	
+
 	}
 }
 
 
-/* Helper to changeOnePixel. This focuses on a section of the picture. 
+/* Helper to changeOnePixel. This focuses on a section of the picture.
  * The status should either be 0 or 1.
  */
 void helper_ChangeInSection(int x, int y, int status, uint8_t * icon) {
   int pixelPlace = 0;
   int rowCalc, rowRest;
-  
+
   rowCalc = y/8;        /*Which row of hexdec values */
   rowRest = y % 8;      /*Number of pixels still to go down, after moving to correct row */
   pixelPlace += rowCalc * 32; /* Moving to the correct row of array*/
@@ -351,7 +355,7 @@ void helper_ChangeInSection(int x, int y, int status, uint8_t * icon) {
     icon[pixelPlace] &= ~(1UL << rowRest);  /* Clearing the chosen bit */
   }
   if (status == 1) { /*Setting the bit */
-    icon[pixelPlace] |= 1UL << rowRest; 
+    icon[pixelPlace] |= 1UL << rowRest;
   }
 }
 
@@ -361,26 +365,26 @@ void changeOnePixel(int x, int y, int status) {
     return;
   }
 	int section = x / 32; /* To see which section/icon the pixel is in */
-  
+
 	switch(section) {
 		case 0 :
 		  helper_ChangeInSection(x, y, status, icon1);
 			break;
-		
+
 	case 1 :
 	  helper_ChangeInSection(x-32, y, status, icon4);
 	  break;
-	  
+
 	case 2 :
 	  helper_ChangeInSection(x-64, y, status, icon3);
 	  break;
-	
+
 	case 3 :
 	  helper_ChangeInSection(x-96, y, status, icon2);
 	  break;
-	  
+
 	}
-	
+
 }
 
 // Clears screen from a certain coordinate and its radius.
@@ -405,7 +409,7 @@ void insertArea(int xMiddle, int yMiddle, int radius){
 }
 
 void addMeteorExtras(int xPos, int yPos){
-  changeOnePixel(xPos+4, yPos+2, 0); 
+  changeOnePixel(xPos+4, yPos+2, 0);
   changeOnePixel(xPos+4, yPos+3, 0);
   changeOnePixel(xPos, yPos+4, 0);
   changeOnePixel(xPos-1, yPos+4, 0);
@@ -415,11 +419,11 @@ void addMeteorExtras(int xPos, int yPos){
   changeOnePixel(xPos-3, yPos-4, 0);
   changeOnePixel(xPos-2, yPos-4, 0);
 }
-  
-  
- // Function for making and controlling a meteor. 
+
+
+ // Function for making and controlling a meteor.
  // xMovement is how many steps the meteor should take in x-axis (this is negative if the meteor goes left)
- // yMovement is steps in y-axis. 
+ // yMovement is steps in y-axis.
  // For meteor to exist put status1 !=0, to remove it put status1=0
  // The meteor has a radius of 3.
 void meteorMovement(){
@@ -450,6 +454,9 @@ void shotMovement(){
 void shipMovement(int xMovement, int yMovement){
   int xPos = shipInfo[0];
   int yPos = shipInfo[1];
+
+  if(xPos+xMovement >= 128 || xPos+xMovement <= 0){xMovement = 0;}
+  if(yPos+yMovement >= 32 || yPos+yMovement <= 0){yMovement = 0;}
 
   removeArea(xPos, yPos, 2);
   removeArea(xPos+2, yPos, 1);
@@ -545,13 +552,13 @@ int instantiateShip(int xPos, int yPos, int xMovement, int yMovement){
 }
 
 
-  
+
 // This function moves all objects (meteors, shots & ships) according to their speeds.
 void moveObjects(){
 
  //Move the meteors.
  meteorMovement();
- 
+
  //Move the shots.
  shotMovement();
 
@@ -563,11 +570,11 @@ void moveObjects(){
   }
 }
 
-float Q_rsqrt( float number ) {  // From Quake III
+float Q_rsqrt( float number ) {  // From Quake III 1/(x)^.5
   long i;
   float x2, y;
   const float threehalfs = 1.5F;
-  
+
   x2 = number * 0.5F;
   y  = number;
   i  = * ( long * ) &y;                       // evil floating point bit level hacking
@@ -580,89 +587,54 @@ float Q_rsqrt( float number ) {  // From Quake III
 // Checks distance between two points using pythagoras.
 float distance(int x, int y){
   float toReturn = x*x + y*y;
-  toReturn = Q_rsqrt(toReturn);
+  toReturn = 1/Q_rsqrt(toReturn);
   return toReturn;
 }
 
-// Checks if a meteor has gotten inte the hitbox of the ship. Returns 1 if collision occurred.
-int shipCollision(){
-  int shipXPos, shipYPos, metXPos, metYPos;
-  shipInfo[0] = shipXPos;
-  shipInfo[1] = shipYPos;
-  int i, deltaX, deltaY;
-  for (i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
-    meteorInfo[i][0] = metXPos;
-    meteorInfo[i][1] = metYPos;
-    deltaX = abs(shipXPos - metXPos);
-    deltaY = abs(shipYPos - metYPos);
-    if(distance(deltaX, deltaY) < 3){ // Ships hitbox is 3 pixels around ship.
-      insertArea(50,15,50);
-      return 1;
+// Checks if a meteor has gotten inte the hitbox of the ship.
+void shipCollision(){
+  int i;
+  for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+    if(meteorInfo[i][2] != 0){
+      if(!(shipInfo[0]+2 < meteorInfo[i][0]-2 || meteorInfo[i][0]+2 < shipInfo[0]-2 || shipInfo[1]+2 < meteorInfo[i][1]-2 || meteorInfo[i][1]+2 < shipInfo[1]-2)){
+	shipHp--;
+	removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
+	meteorInfo[i][0] = 0;
+	meteorInfo[i][1] = 0;
+	meteorInfo[i][2] = 0;
+	meteorInfo[i][3] = 0;
+	meteorInfo[i][4] = 0;
+      }
     }
   }
-  return 0;
 }
-  
-int main(void) {
-	/* Set up peripheral bus clock */
-	OSCCON &= ~0x180000;
-	OSCCON |= 0x080000;
-	
-	/* Set up output pins */
-	AD1PCFG = 0xFFFF;
-	ODCE = 0x0;
-	TRISECLR = 0xFF;
-	PORTE = 0x0;
-	
-	/* Output pins for display signals */
-	PORTF = 0xFFFD;
-	PORTG = (1 << 9);
-	ODCF = 0x0;
-	ODCG = 0x0;
-	TRISFCLR = 0x70;
-	TRISGCLR = 0x200;
-	
-	/* Set up input pins */
-	
-  //Function unclear.
-  TRISDSET = (1 << 8);
-	TRISFSET = (1 << 1);
 
-  //Setting up the pushbuttons to register input.
-  TRISD = (0x47 << 5); //This sets BTN4/3/2 to register as input.
-  TRISF = (0x1 << 1); //This sets up BTN1 to register as input.
-
-	
-	/* Set up SPI as master */
-	SPI2CON = 0;
-	SPI2BRG = 4;
-	
-	/* Clear SPIROV*/
-	SPI2STATCLR &= ~0x40;
-	/* Set CKP = 1, MSTEN = 1; */
-        SPI2CON |= 0x60;
-	
-	/* Turn on SPI */
-	SPI2CONSET = 0x8000;
-	
-	display_init();
-	display_update();
-	
-int endGame = 0;
-int timeCounter = 0;
-
-
-instantiateMeteor(120, 10, -1,1);
-instantiateMeteor(120, 25,-1,-1);
-//instantiateShot(20,16,1,0);
-instantiateShip(5,16, 0, 0);
+// Checks if a shot has gotten inte the hitbox of a meteor.
+void shotCollision(){
+  int s;
+  for(s=0; s<sizeof(shotInfo)/sizeof(shotInfo[0]); s++){
+	  int i;
+	  for( i = 0; i < sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+	    if(meteorInfo[i][2] != 0){
+	      if(!(shotInfo[s][0]+2 < meteorInfo[i][0]-2 || meteorInfo[i][0]+2 < shotInfo[s][0]-2 || shotInfo[s][1]+2 < meteorInfo[i][1]-2 || meteorInfo[i][1]+2 < shotInfo[s][1]-2)){
+		removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
+		meteorInfo[i][0] = 0;
+		meteorInfo[i][1] = 0;
+		meteorInfo[i][2] = 0;
+		meteorInfo[i][3] = 0;
+		meteorInfo[i][4] = 0;
+	      }
+	    }
+	  }
+  }
+}
 
 // Returns the status of all pushbuttons. The statuser are located in the least significant nibble with pushbuttons appearing in the order they are located on the screen.
 int getbtns(void){
   //Get status for BTN 4-2.
   int retPortD = PORTD;
   retPortD = retPortD >> 4; //1110.
-  retPortD &= 0xE; 
+  retPortD &= 0xE;
 
   //Get status for BTN 1.
   int retPortF = PORTF;
@@ -695,25 +667,30 @@ void collectInput(void){
   switchStatus = getSwitches();
   if((switchStatus &= 0x8) == 0x8){ //Switch 4.
     //Make a shot appear.
-    instantiateShot(shipInfo[0],shipInfo[1],3,0);    
+    if(shotTimer = 10000){
+      shotTimer = 0;
+      instantiateShot(shipInfo[0],shipInfo[1],4,0);
+    } else {
+      shotTimer++;
+    }
   }
 
   //Now change the ship's direction depending on which button is pressed.
   btnStatus = getbtns();
   if((btnStatus &= 0x1) == 0x1){ // Btn 1
-    shipInfo[4] = -1;
+    shipInfo[4] = -2;
   }
   btnStatus = getbtns();
   if((btnStatus &= 0x2) == 0x2){ // Btn 2
-    shipInfo[4] = 1;
+    shipInfo[4] = 2;
   }
   btnStatus = getbtns();
   if((btnStatus &= 0x4) == 0x4){ // Btn 3
-    shipInfo[3] = 1;
+    shipInfo[3] = 2;
   }
   btnStatus = getbtns();
   if((btnStatus &= 0x8) == 0x8){ // Btn 4
-    shipInfo[3] = -1;
+    shipInfo[3] = -2;
   }
 
 }
@@ -723,10 +700,12 @@ void resetShipSpeed(void){
   shipInfo[4] = 0;
 }
 
+//This method clears the array containing shots.
 void clearShipShots(void){
   int i;
   for(i=0; i<sizeof(shotInfo)/sizeof(shotInfo[0]); i++){
     if(shotInfo[i][0] >= 128){
+      removeArea(shotInfo[i][0], shotInfo[i][1], 1);
       shotInfo[i][0] = 0;
       shotInfo[i][1] = 0;
       shotInfo[i][2] = 0;
@@ -736,42 +715,157 @@ void clearShipShots(void){
   }
 }
 
+//This method clears the array containing meteors.
+void clearMeteors(void){
+  int i;
+  for(i=0; i<sizeof(meteorInfo)/sizeof(meteorInfo[0]); i++){
+    if(meteorInfo[i][0] >= 128 || meteorInfo[i][0] <= 0 || meteorInfo[i][1] >= 32 || meteorInfo[i][1] <= 0){
+      removeArea(meteorInfo[i][0], meteorInfo[i][1], 4);
+      meteorInfo[i][0] = 0;
+      meteorInfo[i][1] = 0;
+      meteorInfo[i][2] = 0;
+      meteorInfo[i][3] = 0;
+      meteorInfo[i][4] = 0;
+    }
+  }
+}
+
+//This method checks if we're going to spawn a meteor. If we spawn a meteor we'll reset the counter.
+void spawnMeteors(void){
+  if(metSpawnTrigger >= 50){
+    metSpawnTrigger = 0;
+
+    //Generate a random number to determine meteor spawn location.
+    //Rand gives a number between 0-RAND_MAX.
+    //Selects a predetermined spawnpoint depending on randomized number between 0-3.
+    int spawnpoint = rand() % 4;
+    if(spawnpoint == 0){instantiateMeteor(120, 10, -2,1);}
+    if(spawnpoint == 1){instantiateMeteor(120, 25, -2,-1);}
+    if(spawnpoint == 2){instantiateMeteor(60, 20, -1,-1);}
+    if(spawnpoint == 3){instantiateMeteor(10, 25, 1,-1);}
+  } else {
+    metSpawnTrigger++;
+  }
+}
+
+//This method shows the ship's hp on the led-lights by writing to the appropriate e-register slots.
+void showHp(void){
+  int val;
+  if(shipHp >= 3){val = 0x7;}
+  if(shipHp == 2){val = 0x3;}
+  if(shipHp == 1){val = 0x1;}
+  if(shipHp <= 0){val = 0x0;}
+  PORTE = (val << 5);
+}
+
+
+
+int main(void) {
+	/* Set up peripheral bus clock */
+	OSCCON &= ~0x180000;
+	OSCCON |= 0x080000;
+
+	/* Set up output pins */
+	AD1PCFG = 0xFFFF;
+	ODCE = 0x0;
+	TRISECLR = 0xFF;
+
+	/* Output pins for display signals */
+	PORTF = 0xFFFD;
+	PORTG = (1 << 9);
+	ODCF = 0x0;
+	ODCG = 0x0;
+	TRISFCLR = 0x70;
+	TRISGCLR = 0x200;
+
+	/* Set up input pins */
+
+  //Function unclear.
+  TRISDSET = (1 << 8);
+	TRISFSET = (1 << 1);
+
+  //Setting up the pushbuttons to register input.
+  TRISD = (0x47 << 5); //This sets BTN4/3/2 to register as input.
+  TRISF = (0x1 << 1); //This sets up BTN1 to register as input.
+
+
+	/* Set up SPI as master */
+	SPI2CON = 0;
+	SPI2BRG = 4;
+
+	/* Clear SPIROV*/
+	SPI2STATCLR &= ~0x40;
+	/* Set CKP = 1, MSTEN = 1; */
+        SPI2CON |= 0x60;
+
+	/* Turn on SPI */
+	SPI2CONSET = 0x8000;
+
+	display_init();
+	display_update();
+
+int endGame = 0;
+int timeCounter = 0;
+
+
+
+//instantiateMeteor(120, 10, -1,1);
+//instantiateMeteor(120, 25,-1,-1);
+//instantiateShot(20,16,1,0);
+instantiateShip(5,16, 0, 0);
+
 
 //Main game loop.
 while(endGame != 1){
+
+	if(shipHp<1){
+	endGame = 1;
+	}
   //The screen is divided into sections. These sections are now displayed.
 	display_image(288, icon4);
 	display_image(192, icon3);
 	display_image(96, icon2);
 	display_image(0, icon1);
 
+	
+
   //Artificial delay.
 	int j;
 	for(j = 0; j < 100000; j++) { /* Wait */
 		int foo;
 		foo = j +1;
-		}	
+		}
 	/* x,y, status */
 
   //Resets the speed of the ship to 0.
   resetShipSpeed();
 
-	//Collects input from the pushbuttons.
+	//fs input from the pushbuttons.
   collectInput();
 
 	timeCounter++;
 	moveObjects();
   clearShipShots();
-  shipCollision();  // Check if ship has collided. Function returns 1 if collision has occurred.
-	
+  spawnMeteors();
+  clearMeteors();
+  shipCollision();
+  shotCollision();
+  showHp();
+
 	/* After removing this code nothing changed in the output to the screen.
 	display_image(288, icon4);
 	display_image(192, icon3);
 	display_image(96, icon2);
-	display_image(0, icon1); 
+	display_image(0, icon1);
   */
 }
+	while(true){
+		display_string(2,"GAME OVER!");
+		display_update();
+	}
+
 	//for(;;) ;
 	return 0;
 }
+
 
